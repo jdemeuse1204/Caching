@@ -12,16 +12,10 @@ namespace Cache
 
         static void Main(string[] args)
         {
-            var cacheStore = new CacheStore<Program>();
-
             var test = new TestClass();
+            var otherStore = new Cachable<TestClass>(test);
 
-            test.Test(1, new Me
-            {
-                One = 2,
-                Two = 1
-            });
-
+            var x = otherStore.Resolve(w => w.Test(1, "Two"), 100000);
         }
 
 
@@ -35,34 +29,10 @@ namespace Cache
 
     public class TestClass
     {
-        CacheStore<TestClass> cacheStore = new CacheStore<TestClass>();
-
         public object Test(int one, string two)
         {
-            var result = cacheStore.Resolve(() =>
-            {
-                return 1;
-            }, 8000000, w => w.Test(one, two));
 
-            var keys = cacheStore.Keys().ToList();
-
-            cacheStore.Remove(w => w.Test(one, two));
-
-            return result;
-        }
-
-        public object Test(int one, Me me)
-        {
-            var result = cacheStore.Resolve(() =>
-            {
-                return 1;
-            }, 8000000, w => w.Test(one, me));
-
-            var keys = cacheStore.Keys().ToList();
-
-            cacheStore.Remove(w => w.Test(one, me));
-
-            return result;
+            return "Test";
         }
     }
 }

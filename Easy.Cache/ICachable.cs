@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace Easy.Cache
 {
-    public interface ICacheStore<TRegion> where TRegion : class
+    public interface ICachable<TRegion> where TRegion : class
     {
         int TotalKeys { get; }
-        TResult Resolve<TResult>(Func<TResult> action, int secondsTimeout, Expression<Func<TRegion, TResult>> callingMethod, bool cloneResult = true, [CallerMemberName] string methodName = null);
-        void Remove(Expression<Func<TRegion, object>> remove);
+        TResult Resolve<TResult>(Expression<Func<TRegion, TResult>> callingMethod, int secondsTimeout, bool cloneResult = true);
+        void Remove<TResult>(Expression<Func<TRegion, TResult>> remove);
         bool Remove(string key);
         bool Remove(string methodName, object[] filterIds);
         IEnumerable<string> Keys();

@@ -9,27 +9,34 @@ using System.Web.Script.Serialization;
 
 namespace Easy.Cache
 {
-    public class CacheStore<TRegion> : ICacheStore<TRegion> where TRegion : class
+    public class Cachable<TRegion> : ICachable<TRegion> where TRegion : class
     {
         private readonly ObjectCache WebApiCache = MemoryCache.Default;
         private readonly JavaScriptSerializer JavaScriptSerializer = new JavaScriptSerializer();
+        private readonly TRegion RegionInstance;
 
         public int TotalKeys { get { return WebApiCache.Count(); } }
 
-        public TResult Resolve<TResult>(Func<TResult> action, int secondsTimeout, Expression<Func<TRegion, TResult>> callingMethod, bool cloneResult = true, [CallerMemberName] string methodName = null)
+        public Cachable(TRegion regionInstance)
+        {
+            RegionInstance = regionInstance;
+        }
+
+        public TResult NoCache<TResult>(Expression<Func<TRegion, TResult>> callingMethod)
+        {
+            var action = callingMethod.Compile();
+            return action(RegionInstance);
+        }
+
+        public TResult Resolve<TResult>(Expression<Func<TRegion, TResult>> callingMethod, int secondsTimeout, bool cloneResult = true)
         {
             lock (WebApiCache)
             {
                 // If no key, grab data and cache it.
                 // If key return it
-                var cacheMethodInformation = GetCacheMethodInformation(callingMethod as dynamic);
+                var cacheMethodInformation = GetCacheMethodInformation(callingMethod);
 
-                if (cacheMethodInformation.MethodName != methodName)
-                {
-                    throw new Exception("Caller method does not match resolve method");
-                }
-
-                var cacheKey = CreateCacheKey(methodName, cacheMethodInformation.ParameterValues);
+                var cacheKey = CreateCacheKey(cacheMethodInformation.MethodName, cacheMethodInformation.ParameterValues);
 
                 if (WebApiCache.Contains(cacheKey))
                 {
@@ -38,7 +45,8 @@ namespace Easy.Cache
                     return cloneResult ? cachedValue.Copy() : cachedValue;
                 }
 
-                var result = action();
+                var action = callingMethod.Compile();
+                var result = action(RegionInstance);
 
                 if (result == null)
                 {
@@ -52,7 +60,7 @@ namespace Easy.Cache
             }
         }
 
-        public void Remove(Expression<Func<TRegion, object>> remove)
+        public void Remove<TResult>(Expression<Func<TRegion, TResult>> remove)
         {
             var methodInformation = GetCacheMethodInformation(remove);
 
@@ -164,7 +172,7 @@ namespace Easy.Cache
             return JavaScriptSerializer.Serialize(value);
         }
 
-        private CacheMethodInformation GetCacheMethodInformation(Expression<Func<TRegion, object>> method)
+        private CacheMethodInformation GetCacheMethodInformation<TResult>(Expression<Func<TRegion, TResult>> method)
         {
             var parameterValues = new List<object>();
             var result = new CacheMethodInformation();

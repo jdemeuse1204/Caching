@@ -44,9 +44,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CacheStore.cs" />
+    <Compile Include="Cachable.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="ICacheStore.cs" />
+    <Compile Include="ICachable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
