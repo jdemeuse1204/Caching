@@ -13,9 +13,8 @@ namespace Cache
         static void Main(string[] args)
         {
             var test = new TestClass();
-            var otherStore = new Cachable<TestClass>(test);
-
-            var x = otherStore.Resolve(w => w.Test(1, "Two"), 100000);
+            test.GetOne();
+            test.GetOne();
         }
 
 
@@ -29,10 +28,15 @@ namespace Cache
 
     public class TestClass
     {
-        public object Test(int one, string two)
+        public int GetOne()
+        {
+            return this.Resolve(w => w.Test(1, "two"), 100000000);
+        }
+
+        public int Test(int one, string two)
         {
 
-            return "Test";
+            return 1;
         }
     }
 }

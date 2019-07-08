@@ -1,12 +1,13 @@
 ﻿using Easy.Cache.ArrayExtensions;
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Reflection;
 
 // https://github.com/Burtsev-Alexey/net-object-deep-copy
 namespace Easy.Cache
 {
-    internal static class Extensions
+    public static class Extensions
     {
         private static readonly MethodInfo CloneMethod = typeof(Object).GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance);
 

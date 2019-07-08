@@ -4,32 +4,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.Caching;
+using System.Text;
+using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 
 namespace Easy.Cache
 {
-    public static class Cachable
+    public static class CacheStore
     {
+        private static readonly ObjectCache WebApiCache = MemoryCache.Default;
         private static readonly JavaScriptSerializer JavaScriptSerializer = new JavaScriptSerializer();
-        private static readonly ObjectCache Cache = MemoryCache.Default;
 
-        public static int TotalKeys { get { return Cache.Count(); } }
-
-        public static TResult Resolve<TResult, TRegion>(this TRegion region, Expression<Func<TRegion, TResult>> callingMethod, int secondsTimeout, bool cloneResult = true) where TRegion : class
+        public static TResult Resolve<TResult, TRegion>(TRegion region, Expression<Func<TRegion, TResult>> callingMethod, int secondsTimeout, bool cloneResult = true)
         {
-            lock (Cache)
+            lock (WebApiCache)
             {
                 // If no key, grab data and cache it.
                 // If key return it
                 var cacheMethodInformation = GetCacheMethodInformation(callingMethod);
+
                 var regionName = typeof(TRegion).Name;
 
                 var cacheKey = CreateCacheKey(cacheMethodInformation.MethodName, regionName, cacheMethodInformation.ParameterValues);
 
-                if (Cache.Contains(cacheKey))
+                if (WebApiCache.Contains(cacheKey))
                 {
                     // return a clone otherwise cache can get changed by ref
-                    var cachedValue = (TResult)Cache.Get(cacheKey);
+                    var cachedValue = (TResult)WebApiCache.Get(cacheKey);
                     return cloneResult ? cachedValue.Copy() : cachedValue;
                 }
 
@@ -42,78 +43,9 @@ namespace Easy.Cache
                 }
 
                 // do not cache nulls
-                Cache.Add(cacheKey, result, DateTime.Now.AddSeconds(secondsTimeout));
+                WebApiCache.Add(cacheKey, result, DateTime.Now.AddSeconds(secondsTimeout));
 
                 return cloneResult ? result.Copy() : result;
-            }
-        }
-
-        public static bool Remove<TResult, TRegion>(Expression<Func<TRegion, TResult>> remove) where TRegion : class
-        {
-            var methodInformation = GetCacheMethodInformation(remove);
-            var regionName = typeof(TRegion).Name;
-
-            return Remove(methodInformation.MethodName, regionName, methodInformation.ParameterValues);
-        }
-
-        public static bool Remove(string key, string regionName)
-        {
-            lock (Cache)
-            {
-                // If no key grab data and cache it
-                // if key return it
-                var cacheKey = CreateCacheKey(key, regionName, new object[] { });
-
-                if (Cache.Contains(cacheKey))
-                {
-                    Cache.Remove(cacheKey);
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
-        public static bool Remove(string methodName, string regionName, object[] filterIds)
-        {
-            lock (Cache)
-            {
-                // If no key grab data and cache it
-                // if key return it
-                var cacheKey = CreateCacheKey(methodName, regionName, filterIds);
-
-                string foundKey = Cache.Select(kvp => kvp.Key).FirstOrDefault(w => w == cacheKey);
-
-                if (foundKey != null && Cache.Contains(foundKey))
-                {
-                    Cache.Remove(cacheKey);
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
-        public static IEnumerable<string> Keys()
-        {
-            foreach (var item in Cache)
-            {
-                yield return item.Key;
-            }
-        }
-
-        public static List<string> Bust()
-        {
-            lock (Cache)
-            {
-                var removed = new List<string>();
-                foreach (var item in Cache)
-                {
-                    removed.Add(item.Key);
-                    Cache.Remove(item.Key);
-                }
-
-                return removed;
             }
         }
 
@@ -165,7 +97,7 @@ namespace Easy.Cache
             return JavaScriptSerializer.Serialize(value);
         }
 
-        private static CacheMethodInformation GetCacheMethodInformation<TResult, TRegion>(Expression<Func<TRegion, TResult>> method) where TRegion : class
+        private static CacheMethodInformation GetCacheMethodInformation<TResult, TRegion>(Expression<Func<TRegion, TResult>> method)
         {
             var parameterValues = new List<object>();
             var result = new CacheMethodInformation();
